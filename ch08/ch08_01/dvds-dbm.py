@@ -18,6 +18,7 @@ import tempfile
 import xml.etree.ElementTree
 import xml.parsers.expat
 import xml.sax.saxutils
+
 import Console
 import Util
 
@@ -31,6 +32,7 @@ def main():
     filename = os.path.join(os.path.dirname(__file__), "dvds.dbm")
     db = None
     try:
+        # 打开数据库
         db = shelve.open(filename, protocol=pickle.HIGHEST_PROTOCOL)
         action = ""
         while True:
@@ -45,10 +47,11 @@ def main():
                     if len(db) else "(A)dd  (I)mport  (Q)uit")
             valid = frozenset("aelrixq" if len(db) else "aiq")
             action = Console.get_menu_choice(menu, valid,
-                                        "l" if len(db) else "a", True)
+                                             "l" if len(db) else "a", True)
             functions[action](db)
     finally:
         if db is not None:
+            # 关闭数据库
             db.close()
 
 
@@ -65,7 +68,7 @@ def add_dvd(db):
                                    minimum=0, maximum=60*48)
     db[title] = (director, year, duration)
     db.sync()
-    
+
 
 def edit_dvd(db):
     old_title = find_dvd(db, "edit")
@@ -86,7 +89,7 @@ def edit_dvd(db):
     if title != old_title:
         del db[old_title]
     db.sync()
-    
+
 
 def list_dvds(db):
     start = ""
@@ -99,7 +102,7 @@ def list_dvds(db):
             director, year, duration = db[title]
             print("{title} ({year}) {duration} minute{0}, by "
                   "{director}".format(Util.s(duration), **locals()))
-    
+
 
 def remove_dvd(db):
     title = find_dvd(db, "remove")
@@ -109,7 +112,7 @@ def remove_dvd(db):
     if ans:
         del db[title]
         db.sync()
-    
+
 
 def import_(db):
     filename = Console.get_string("Import from", "filename")
@@ -135,7 +138,7 @@ def import_(db):
     print("Imported {0} dvd{1}".format(len(db), Util.s(len(db))))
     db.sync()
 
-    
+
 def export(db):
     filename = os.path.join(tempfile.gettempdir(), "dvds.xml")
     with open(filename, "w", encoding="utf8") as fh:
@@ -145,7 +148,7 @@ def export(db):
             director, year, duration = db[title]
             fh.write('<dvd year="{year}" duration="{duration}" '
                      'director={0}>'.format(xml.sax.saxutils.
-                     quoteattr(director), **locals()))
+                                            quoteattr(director), **locals()))
             fh.write(xml.sax.saxutils.escape(title))
             fh.write("</dvd>\n")
         fh.write("</dvds>\n")
@@ -184,7 +187,8 @@ def find_dvd(db, message):
             for i, match in enumerate(matches):
                 print("{0}: {1}".format(i + 1, match))
             which = Console.get_integer("Number (or 0 to cancel)",
-                            "number", minimum=1, maximum=len(matches))
+                                        "number", minimum=1, maximum=len(matches))
             return matches[which - 1] if which != 0 else None
+
 
 main()
